@@ -18,5 +18,27 @@ function Pandoc (doc)
     end
   end
 
+  ----------------------------------------------------------------------
+  -- Part 2: Fix broken headers within paragraphs
+  ----------------------------------------------------------------------
+  local fixed_blocks = {}
+  for _, block in ipairs(doc.blocks) do
+    if block.t == 'Para' then
+      local content = pandoc.utils.stringify(block)
+      local head_text, header_content = content:match("(.-)## (.*)")
+      if head_text then
+        if head_text:match("%S") then
+          table.insert(fixed_blocks, pandoc.Para(pandoc.Str(head_text)))
+        end
+        table.insert(fixed_blocks, pandoc.Header(2, pandoc.read(header_content).blocks[1].content))
+      else
+        table.insert(fixed_blocks, block)
+      end
+    else
+      table.insert(fixed_blocks, block)
+    end
+  end
+  doc.blocks = fixed_blocks
+
   return doc
 end
