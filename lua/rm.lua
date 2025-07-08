@@ -1,45 +1,45 @@
--- Pandoc Lua filter to remove a specific trailing metadata block.
--- This script works by searching backwards from the end of the document
--- to reliably find the final "Tags" and "Metadata" sections.
+-- File: rm.lua
+-- Final version: Adds the title and correctly removes only the metadata block,
+-- leaving the bibliography intact.
 
 function Pandoc (doc)
-  local blocks = doc.blocks
-  local cut_from_index = -1       -- The index where we'll start cutting (the HorizontalRule)
-  local found_metadata_header = false
-  local found_tags_header = false
-
-  -- 1. Iterate backwards from the end of the document's blocks.
-  for i = #blocks, 1, -1 do
-    local current_block = blocks[i]
-
-    -- 2. Look for the "## Metadata:" header first.
-    if not found_metadata_header and current_block.t == 'Header' and current_block.level == 2 then
-      if pandoc.utils.stringify(current_block.content):match('^Metadata:$') then
-        found_metadata_header = true
-      end
-    end
-
-    -- 3. After that, look for the "## Tags" header.
-    if found_metadata_header and not found_tags_header and current_block.t == 'Header' and current_block.level == 2 then
-      if pandoc.utils.stringify(current_block.content):match('^Tags$') then
-        found_tags_header = true
-      end
-    end
-
-    -- 4. Once both headers have been found, find the HorizontalRule that precedes them.
-    -- This is the starting point of the block we want to remove.
-    if found_tags_header and current_block.t == 'HorizontalRule' then
-      cut_from_index = i
-      break -- Exit the loop as we've found our target
+  ----------------------------------------------------------------------
+  -- Part 1: Add the document title (Working)
+  ----------------------------------------------------------------------
+  if PANDOC_STATE and PANDOC_STATE.input_files then
+    local source_path = PANDOC_STATE.input_files[1]
+    
+    if source_path then
+      local filename = source_path:match("([^/\\]+)$")
+      local clean_title = filename:gsub("%.md$", "")
+      local typst_title_code = '#align(left)[#text(weight: "bold", size: 1.6em, font: "Bembo")[' .. clean_title .. '] #v(2em, weak: true)] #line(length: 100%, stroke: 0.4pt + gray)'
+      local title_block = pandoc.RawBlock('typst', typst_title_code)
+      table.insert(doc.blocks, 1, title_block)
     end
   end
 
-  -- 5. If we found the starting point, truncate the document's blocks.
+  ----------------------------------------------------------------------
+  -- Part 2: Remove trailing metadata block (Corrected Logic)
+  ----------------------------------------------------------------------
+  local blocks = doc.blocks
+  local cut_from_index = -1
+
+  -- Find the start of the metadata section (the "Tags" table).
+  for i, block in ipairs(blocks) do
+    if block.t == 'Table' and pandoc.utils.stringify(block):match('^## Tags') then
+      cut_from_index = i
+      break -- Exit the loop once we find it.
+    end
+  end
+
+  -- If we found the start of the metadata block, create a new list
+  -- containing only the blocks that come *before* it.
   if cut_from_index ~= -1 then
     local new_blocks = {}
     for i = 1, cut_from_index - 1 do
       table.insert(new_blocks, blocks[i])
     end
+    -- Replace the document's blocks with our new, shorter list.
     doc.blocks = new_blocks
   end
 
