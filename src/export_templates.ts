@@ -22,7 +22,7 @@ export default {
     name: 'Academic Note',
     type: 'pandoc',
     arguments:
-      '-f ${fromFormat} --resource-path="${currentDir}" --resource-path="${attachmentFolderPath}" --pdf-engine=typst --template=/Users/maxcampbell/Documents/Main/template.typ  -s -o "${outputPath}" ',
+      '-f ${fromFormat} --resource-path="${currentDir}" --resource-path="${attachmentFolderPath}" --pdf-engine=typst --template=/Users/maxcampbell/Documents/Main/template.typ --lua-filter="${luaDir}/rm.lua"  -s -o "${outputPath}" ',
     extension: '.pdf',
   },
 } satisfies Record<string, ExportSetting> as Record<string, ExportSetting>;
