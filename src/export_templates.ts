@@ -26,7 +26,7 @@ export default {
     extension: '.pdf',
   },
   'Simple Export': {
-    name: 'Academic Note',
+    name: 'Simple Export',
     type: 'pandoc',
     arguments:
       '-f ${fromFormat} --resource-path="${currentDir}" --resource-path="${attachmentFolderPath}" --pdf-engine=typst --template=/Users/maxcampbell/Documents/Main/template.typ --lua-filter="${luaDir}/simple.lua"  -s -o "${outputPath}" ',
