@@ -25,4 +25,11 @@ export default {
       '-f ${fromFormat} --resource-path="${currentDir}" --resource-path="${attachmentFolderPath}" --pdf-engine=typst --template=/Users/maxcampbell/Documents/Main/template.typ --lua-filter="${luaDir}/rm.lua"  -s -o "${outputPath}" ',
     extension: '.pdf',
   },
+  'Simple Export': {
+    name: 'Academic Note',
+    type: 'pandoc',
+    arguments:
+      '-f ${fromFormat} --resource-path="${currentDir}" --resource-path="${attachmentFolderPath}" --pdf-engine=typst --template=/Users/maxcampbell/Documents/Main/template.typ --lua-filter="${luaDir}/simple.lua"  -s -o "${outputPath}" ',
+    extension: '.pdf',
+  },
 } satisfies Record<string, ExportSetting> as Record<string, ExportSetting>;
