@@ -41,6 +41,80 @@ function Pandoc (doc)
   doc.blocks = fixed_blocks
 
   ----------------------------------------------------------------------
+  -- Part 2.5: Convert Markdown links to Typst links
+  ----------------------------------------------------------------------
+  local function escape_typst_string(str)
+    if not str then return "" end
+    -- Escape backslashes first, then other special characters
+    str = str:gsub("\\", "\\\\")
+    str = str:gsub("#", "\\#")  -- Escape # symbols
+    str = str:gsub('"', '\\"')
+    str = str:gsub("'", "\\'")
+    -- Add other escapes as needed
+    return str
+  end
+
+
+  local link_fixer_walker = {
+    Link = function(el)
+      -- Get the link's destination URL and the link's text content.
+      local url = el.target
+      local text = pandoc.utils.stringify(el.content)
+      
+      -- Escape any special characters in the URL and text for Typst.
+      local safe_url = escape_typst_string(url)
+      local safe_text = escape_typst_string(text)
+      
+      -- Create a raw Typst block with the #link function.
+      -- This format creates a clickable link with descriptive text.
+      return pandoc.RawInline('typst', string.format('#link("https://maxc.codes/404")[%s]', safe_url, safe_text))
+    end
+  }
+  
+  -- Walk through the document (after headers are fixed) and apply the link fixer.
+  doc = doc:walk(link_fixer_walker)
+
+  ----------------------------------------------------------------------
+  -- Part 2.6: Convert bare URLs (autolinks) to Typst links
+  ----------------------------------------------------------------------
+  local autolink_fixer_walker = {
+    Str = function(el)
+      -- Check if the string contains a URL.
+      if el.text:match("https?://") then
+        local parts = {}
+        local last_pos = 1
+        -- Find all URLs in the string and process them.
+        for url in el.text:gmatch("(https?://[%w%p~_-/?=&%%#]+)") do
+          local url_start, url_end = el.text:find(url, last_pos, true)
+          if url_start then
+            -- Add any text that came before the URL.
+            local preceding_text = el.text:sub(last_pos, url_start - 1)
+            if #preceding_text > 0 then
+              table.insert(parts, pandoc.Str(preceding_text))
+            end
+            
+            -- Add the URL as a Typst link.
+            local safe_url = escape_typst_string(url)
+            table.insert(parts, pandoc.RawInline('typst', string.format('#link("%s")', safe_url)))
+            last_pos = url_end + 1
+          end
+        end
+        
+        -- Add any remaining text after the last URL.
+        local remaining_text = el.text:sub(last_pos)
+        if #remaining_text > 0 then
+          table.insert(parts, pandoc.Str(remaining_text))
+        end
+        
+        return parts
+      end
+    end
+  }
+
+  -- Walk through the document again to fix autolinks.
+  doc = doc:walk(autolink_fixer_walker)
+
+  ----------------------------------------------------------------------
   -- Part 3: Remove trailing metadata block (Robust Logic)
   ----------------------------------------------------------------------
   local blocks = doc.blocks
